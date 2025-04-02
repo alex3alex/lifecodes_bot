@@ -84,5 +84,19 @@ async def set_webhook():
 def index():
     return "<h1>Server is running</h1>"
 
+@app.route('/' + TOKEN, methods=['POST'])
+async def webhook():
+    try:
+        data = request.get_json(force=True)
+        if not data:
+            return 'Invalid JSON', 400
+        update = Update.de_json(data, application.bot)
+        await application.process_update(update)
+        return 'ok'
+    except Exception as e:
+        logger.error(f'Error processing update: {e}')
+        return 'Error', 500
+
+
 if __name__ == '__main__':
     app.run(threaded=True)
