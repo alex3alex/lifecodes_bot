@@ -1,0 +1,19 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "inlinebot.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "inlinebot.py"
+        }
+    ],
+    "environment": {
+        "BOT_TOKEN": "YOUR_BOT_TOKEN",
+        "APP_NAME": "YOUR_APP_NAME"
+    }
+}
