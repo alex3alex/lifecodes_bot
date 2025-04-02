@@ -22,6 +22,10 @@ if not TOKEN:
 
 APP_NAME = os.environ.get("APP_NAME")
 
+if not APP_NAME:
+    print("APP_NAME is not set")
+    exit(1)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Hi! Use inline mode to get caps, bold or italic versions of your text!')
 
