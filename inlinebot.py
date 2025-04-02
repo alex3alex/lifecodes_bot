@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 TOKEN = os.environ.get("BOT_TOKEN")
+
+if not TOKEN:
+    print("BOT_TOKEN is not set")
+    exit(1)
+
 APP_NAME = os.environ.get("APP_NAME")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
