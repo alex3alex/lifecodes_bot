@@ -67,15 +67,35 @@ def webhook():
     application.process_update(update)
     return 'ok'
 
+@app.route('/' + TOKEN, methods=['POST'])
+async def webhook():
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    await application.process_update(update)
+    return 'ok'
+
+import asyncio
+
 @app.route('/set_webhook', methods=['GET', 'POST'])
-def set_webhook():
+async def set_webhook():
     webhook_url = f"https://{APP_NAME}.vercel.app/{TOKEN}"
-    application.bot.set_webhook(webhook_url)
-    return "webhook set to {}".format(webhook_url)
+    try:
+        await application.bot.set_webhook(webhook_url)
+        return f"Webhook set to {webhook_url}"
+    except Exception as e:
+        return f"Error setting webhook: {e}"
+
 
 @app.route('/')
 def index():
     return "<h1>Server is running</h1>"
 
+
 if __name__ == '__main__':
+    # Установка webhook при запуске
+    import requests
+
+    webhook_url = f"https://{APP_NAME}.vercel.app/set_webhook"
+    requests.post(webhook_url)  # Используйте POST-запрос
+
     app.run(threaded=True)
+
