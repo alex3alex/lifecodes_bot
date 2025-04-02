@@ -85,7 +85,7 @@ def index():
     return "<h1>Server is running</h1>"
 
 @app.route('/' + TOKEN, methods=['POST'])
-async def webhook():
+async def webhook_handler():
     try:
         data = request.get_json(force=True)
         if not data:
