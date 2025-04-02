@@ -62,18 +62,10 @@ application.add_handler(InlineQueryHandler(inline_query))
 application.add_error_handler(error_handler)
 
 @app.route('/' + TOKEN, methods=['POST'])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), application.bot)
-    application.process_update(update)
-    return 'ok'
-
-@app.route('/' + TOKEN, methods=['POST'])
 async def webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
     await application.process_update(update)
     return 'ok'
-
-import asyncio
 
 @app.route('/set_webhook', methods=['GET', 'POST'])
 async def set_webhook():
@@ -84,18 +76,9 @@ async def set_webhook():
     except Exception as e:
         return f"Error setting webhook: {e}"
 
-
 @app.route('/')
 def index():
     return "<h1>Server is running</h1>"
 
-
 if __name__ == '__main__':
-    # Установка webhook при запуске
-    import requests
-
-    webhook_url = f"https://{APP_NAME}.vercel.app/set_webhook"
-    requests.post(webhook_url)  # Используйте POST-запрос
-
     app.run(threaded=True)
-
