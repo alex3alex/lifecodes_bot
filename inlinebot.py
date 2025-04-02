@@ -67,9 +67,16 @@ application.add_error_handler(error_handler)
 
 @app.route('/' + TOKEN, methods=['POST'])
 async def webhook():
-    update = Update.de_json(request.get_json(force=True), application.bot)
-    await application.process_update(update)
-    return 'ok'
+    try:
+        data = request.get_json(force=True)
+        if not data:
+            return 'Invalid JSON', 400
+        update = Update.de_json(data, application.bot)
+        await application.process_update(update)
+        return 'ok'
+    except Exception as e:
+        logger.error(f'Error processing update: {e}')
+        return 'Error', 500
 
 @app.route('/set_webhook', methods=['GET', 'POST'])
 async def set_webhook():
@@ -83,20 +90,6 @@ async def set_webhook():
 @app.route('/')
 def index():
     return "<h1>Server is running</h1>"
-
-@app.route('/' + TOKEN, methods=['POST'])
-async def webhook_handler():
-    try:
-        data = request.get_json(force=True)
-        if not data:
-            return 'Invalid JSON', 400
-        update = Update.de_json(data, application.bot)
-        await application.process_update(update)
-        return 'ok'
-    except Exception as e:
-        logger.error(f'Error processing update: {e}')
-        return 'Error', 500
-
 
 if __name__ == '__main__':
     app.run(threaded=True)
