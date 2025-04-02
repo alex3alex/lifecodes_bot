@@ -6,10 +6,16 @@ from uuid import uuid4
 from telegram import InlineQueryResultArticle, InputTextMessageContent, Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes, InlineQueryHandler
+from flask import Flask, request
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+
+TOKEN = os.environ.get("BOT_TOKEN")
+APP_NAME = os.environ.get("APP_NAME")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Hi! Use inline mode to get caps, bold or italic versions of your text!')
@@ -45,20 +51,26 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f'Update {update} caused error {context.error}')
 
-def main():
-    TOKEN = os.environ.get("BOT_TOKEN")
-    PORT = int(os.environ.get("PORT", "8443"))
-    APP_NAME = os.environ.get("APP_NAME")
+application = Application.builder().token(TOKEN).build()
+application.add_handler(CommandHandler('start', start))
+application.add_handler(InlineQueryHandler(inline_query))
+application.add_error_handler(error_handler)
 
-    application = Application.builder().token(TOKEN).build()
-    application.add_handler(CommandHandler('start', start))
-    application.add_handler(InlineQueryHandler(inline_query))
-    application.add_error_handler(error_handler)
+@app.route('/' + TOKEN, methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    application.process_update(update)
+    return 'ok'
 
-    application.run_webhook(listen="0.0.0.0",
-                          port=PORT,
-                          url_path=TOKEN,
-                          webhook_url=f"https://{APP_NAME}.vercel.app/{TOKEN}")
+@app.route('/set_webhook', methods=['GET', 'POST'])
+def set_webhook():
+    webhook_url = f"https://{APP_NAME}.vercel.app/{TOKEN}"
+    application.bot.set_webhook(webhook_url)
+    return "webhook set to {}".format(webhook_url)
+
+@app.route('/')
+def index():
+    return "<h1>Server is running</h1>"
 
 if __name__ == '__main__':
-    main()
+    app.run(threaded=True)
