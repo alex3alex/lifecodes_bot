@@ -65,9 +65,6 @@ application.add_handler(CommandHandler('start', start))
 application.add_handler(InlineQueryHandler(inline_query))
 application.add_error_handler(error_handler)
 
-# Инициализируйте приложение Telegram
-application.initialize()
-
 @app.route('/' + TOKEN, methods=['POST'])
 async def webhook():
     try:
