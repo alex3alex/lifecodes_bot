@@ -1,15 +1,12 @@
 import os
 from typing import Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 
-from telegram import Update, Bot
-from telegram.ext import Dispatcher, MessageHandler, Filters, CommandHandler
-
+from telegram import Bot
 
 TOKEN = os.environ.get("BOT_TOKEN")
-
 APP_NAME = os.environ.get("APP_NAME")
 
 app = FastAPI()
@@ -31,32 +28,30 @@ class TelegramWebhook(BaseModel):
     poll: Optional[dict]
     poll_answer: Optional[dict]
 
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
-
-def register_handlers(dispatcher):
-    start_handler = CommandHandler('start', start)
-    dispatcher.add_handler(start_handler)
+def send_message(chat_id, text):
+    """
+    Helper function to send a message using Telegram Bot API.
+    """
+    bot = Bot(token=TOKEN)
+    bot.send_message(chat_id=chat_id, text=text)
 
 @app.post("/webhook")
 def webhook(webhook_data: TelegramWebhook):
     '''
     Telegram Webhook
     '''
-    # Method 1
-    bot = Bot(token=TOKEN)
-    update = Update.de_json(webhook_data.__dict__, bot) # convert the Telegram Webhook class to dictionary using __dict__ dunder method
-    dispatcher = Dispatcher(bot, None, workers=4)
-    register_handlers(dispatcher)
+    # Метод 1 (закомментирован)
+    # bot = Bot(token=TOKEN)
+    # update = Update.de_json(webhook_data.__dict__, bot)  # convert the Telegram Webhook class to dictionary using __dict__ dunder method
+    # dispatcher = Dispatcher(bot, None, workers=4)
+    # register_handlers(dispatcher)
+    # dispatcher.process_update(update)
 
-    # handle webhook request
-    dispatcher.process_update(update)
-
-    # Method 2
-    # you can just handle the webhook request here without using python-telegram-bot
-    # if webhook_data.message:
-    #     if webhook_data.message.text == '/start':
-    #         send_message(webhook_data.message.chat.id, 'Hello World')
+    # Метод 2 (используется)
+    if webhook_data.message:
+        if webhook_data.message.get("text") == '/start':
+            chat_id = webhook_data.message["chat"]["id"]
+            send_message(chat_id, "Hello World")
 
     return {"message": "ok"}
 
