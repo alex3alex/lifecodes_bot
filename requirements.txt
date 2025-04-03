@@ -1,3 +1,2 @@
-python-telegram-bot==22.0
-Flask==3.0.0
-Flask[async]
+fastapi==0.63.0
+python-telegram-bot==13.4

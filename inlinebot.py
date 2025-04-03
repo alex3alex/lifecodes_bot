@@ -1,95 +1,65 @@
-import logging
 import os
-from html import escape
-from uuid import uuid4
+from typing import Optional
 
-from telegram import InlineQueryResultArticle, InputTextMessageContent, Update
-from telegram.constants import ParseMode
-from telegram.ext import Application, CommandHandler, ContextTypes, InlineQueryHandler
-from flask import Flask, request
+from fastapi import FastAPI, Request
+from pydantic import BaseModel
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-logger = logging.getLogger(__name__)
+from telegram import Update, Bot
+from telegram.ext import Dispatcher, MessageHandler, Filters, CommandHandler
 
-app = Flask(__name__)
 
 TOKEN = os.environ.get("BOT_TOKEN")
 
-if not TOKEN:
-    print("BOT_TOKEN is not set")
-    exit(1)
-
 APP_NAME = os.environ.get("APP_NAME")
 
-if not APP_NAME:
-    print("APP_NAME is not set")
-    exit(1)
+app = FastAPI()
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Hi! Use inline mode to get caps, bold or italic versions of your text!')
+class TelegramWebhook(BaseModel):
+    '''
+    Telegram Webhook Model using Pydantic for request body validation
+    '''
+    update_id: int
+    message: Optional[dict]
+    edited_message: Optional[dict]
+    channel_post: Optional[dict]
+    edited_channel_post: Optional[dict]
+    inline_query: Optional[dict]
+    chosen_inline_result: Optional[dict]
+    callback_query: Optional[dict]
+    shipping_query: Optional[dict]
+    pre_checkout_query: Optional[dict]
+    poll: Optional[dict]
+    poll_answer: Optional[dict]
 
-async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.inline_query.query
-    if not query:
-        return
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
 
-    results = [
-        InlineQueryResultArticle(
-            id=str(uuid4()),
-            title='Caps',
-            input_message_content=InputTextMessageContent(query.upper())
-        ),
-        InlineQueryResultArticle(
-            id=str(uuid4()),
-            title='Bold',
-            input_message_content=InputTextMessageContent(
-                f'<b>{escape(query)}</b>', parse_mode=ParseMode.HTML
-            ),
-        ),
-        InlineQueryResultArticle(
-            id=str(uuid4()),
-            title='Italic',
-            input_message_content=InputTextMessageContent(
-                f'<i>{escape(query)}</i>', parse_mode=ParseMode.HTML
-            ),
-        ),
-    ]
-    await update.inline_query.answer(results)
+def register_handlers(dispatcher):
+    start_handler = CommandHandler('start', start)
+    dispatcher.add_handler(start_handler)
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(f'Update {update} caused error {context.error}')
+@app.post("/webhook")
+def webhook(webhook_data: TelegramWebhook):
+    '''
+    Telegram Webhook
+    '''
+    # Method 1
+    bot = Bot(token=TOKEN)
+    update = Update.de_json(webhook_data.__dict__, bot) # convert the Telegram Webhook class to dictionary using __dict__ dunder method
+    dispatcher = Dispatcher(bot, None, workers=4)
+    register_handlers(dispatcher)
 
-application = Application.builder().token(TOKEN).build()
-application.add_handler(CommandHandler('start', start))
-application.add_handler(InlineQueryHandler(inline_query))
-application.add_error_handler(error_handler)
+    # handle webhook request
+    dispatcher.process_update(update)
 
-@app.route('/' + TOKEN, methods=['POST'])
-async def webhook():
-    try:
-        data = request.get_json(force=True)
-        if not data:
-            return 'Invalid JSON', 400
-        update = Update.de_json(data, application.bot)
-        await application.process_update(update)
-        return 'ok'
-    except Exception as e:
-        logger.error(f'Error processing update: {e}')
-        return 'Error', 500
+    # Method 2
+    # you can just handle the webhook request here without using python-telegram-bot
+    # if webhook_data.message:
+    #     if webhook_data.message.text == '/start':
+    #         send_message(webhook_data.message.chat.id, 'Hello World')
 
-@app.route('/set_webhook', methods=['GET', 'POST'])
-async def set_webhook():
-    webhook_url = f"https://{APP_NAME}.vercel.app/{TOKEN}"
-    try:
-        await application.bot.set_webhook(webhook_url)
-        return f"Webhook set to {webhook_url}"
-    except Exception as e:
-        return f"Error setting webhook: {e}"
+    return {"message": "ok"}
 
-@app.route('/')
+@app.get("/")
 def index():
-    return "<h1>Server is running</h1>"
-
-if __name__ == '__main__':
-    app.run(threaded=True)
+    return {"message": "Hello World"}
